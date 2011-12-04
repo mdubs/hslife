@@ -39,6 +39,38 @@ flatten :: [[a]] -> [a]
 flatten [] = []
 flatten (x:xs) = x ++ (flatten xs) 
 
+----------------------------------- Printing Code ------------------------------------------
+runGame :: [Point] -> Integer -> IO()
+runGame _ 0 = putStrLn "THE END"
+runGame pts remaining = do
+          printBoard pts
+          runGame (tick pts) (remaining-1)
+
+printBoard :: [Point] -> IO()
+printBoard a = putStrLn (unlines (board a))
+board :: [Point] -> [[Char]]
+board a = map (cellLine a) (map (line [min_y..max_y]) [min_x..max_x])
+    where  min_y = 0
+           max_y = 10
+           min_x = 0
+           max_x = 10
+
+cellLine :: [Point] -> [Point] -> [Char]
+cellLine alivePts linePoints = map (cell alivePts) linePoints
+
+cell :: [Point] -> Point -> Char
+cell alivepts point
+    | is_pt_alive = '*'
+    | otherwise   = '-'
+    where   is_pt_alive = point `elem` alivepts
+
+line :: [Integer] -> Integer -> [Point]
+line a b = map (point b) a
+
+point :: Integer -> Integer -> Point
+point a b = (Point a b) 
+
+----------------------------------- Testing Code ------------------------------------------
 assert_equal :: Eq a => Show a => a -> a -> IO()
 assert_equal x y
     | x == y = putStrLn "."
