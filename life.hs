@@ -1,5 +1,6 @@
 import Data.List
 data Point = Point Integer Integer deriving (Show, Eq)
+type Boundary = (Integer,Integer,Integer,Integer)
 
 tick :: [Point] -> [Point]
 tick world = [ cell | cell <- cells_involved_in_this_tick, will_live cell world]
@@ -39,36 +40,62 @@ flatten :: [[a]] -> [a]
 flatten [] = []
 flatten (x:xs) = x ++ (flatten xs) 
 
------------------------------------ Printing Code ------------------------------------------
+----------------------------------- Game Running and Iterations ------------------------------------------
 runGame :: [Point] -> Integer -> IO()
-runGame _ 0 = putStrLn "THE END"
-runGame pts remaining = do
-          printBoard pts
-          runGame (tick pts) (remaining-1)
+runGame pts numIterations = runGameStep (maxCoords pts) pts numIterations
 
-printBoard :: [Point] -> IO()
-printBoard a = putStrLn (unlines (board a))
-board :: [Point] -> [[Char]]
-board a = map (cellLine a) (map (line [min_y..max_y]) [min_x..max_x])
-    where  min_y = 0
-           max_y = 10
-           min_x = 0
-           max_x = 10
+runGameStep :: Boundary -> [Point] -> Integer -> IO()
+runGameStep _ _ 0 = putStrLn "THE END"
+runGameStep currBoundary pts remaining =
+    do
+          printBoard (min_x,min_y,max_x,max_y) pts
+          runGameStep (min_x,min_y,max_x,max_y) (tick pts) (remaining-1)
 
-cellLine :: [Point] -> [Point] -> [Char]
-cellLine alivePts linePoints = map (cell alivePts) linePoints
+    where (new_min_x,new_min_y,new_max_x,new_max_y) = maxCoords pts
+          (curr_min_x,curr_min_y,curr_max_x,curr_max_y) = currBoundary
+          max_x = max new_max_x curr_max_x
+          min_x = min new_min_x curr_min_x
+          max_y = max new_max_y curr_max_y
+          min_y = min new_min_y curr_min_y
 
-cell :: [Point] -> Point -> Char
-cell alivepts point
+----------------------------------- Printing Code ------------------------------------------
+printBoard :: Boundary -> [Point] -> IO()
+printBoard a b = putStrLn (unlines (board a b))
+
+board :: Boundary -> [Point] -> [[Char]]
+board boundary pts = map (line pts y_range) x_range
+    where (min_x, min_y, max_x, max_y) = boundary
+          x_range = [min_x..max_x]
+          y_range = [min_y..max_y]
+
+line :: [Point] -> [Integer] -> Integer ->  [Char]
+line pts y_points x_point = map (pointChar pts x_point) y_points
+
+pointChar :: [Point] -> Integer -> Integer -> Char
+pointChar alivepts x y
     | is_pt_alive = '*'
     | otherwise   = '-'
-    where   is_pt_alive = point `elem` alivepts
+    where
+         point = (Point x y)   
+         is_pt_alive = point `elem` alivepts
 
-line :: [Integer] -> Integer -> [Point]
-line a b = map (point b) a
+maxCoords :: [Point] -> Boundary
+maxCoords [] = (0,0,0,0)
+maxCoords cells = (min_x, min_y, max_x, max_y)
+    where max_x = maximum [ x | (Point x y) <- cells ]
+          min_x = minimum [ x | (Point x y) <- cells ]
+          max_y = maximum [ y | (Point x y) <- cells ]
+          min_y = minimum [ y | (Point x y) <- cells ]
 
-point :: Integer -> Integer -> Point
-point a b = (Point a b) 
+----------------------------------- Examples ------------------------------------------
+slider :: [Point]
+slider = [(Point 0 1), (Point 1 2), (Point 2 0), (Point 2 1), (Point 2 2)]
+
+beacon :: [Point]
+beacon = [(Point 0 0), (Point 0 1), (Point 1 0), (Point 1 1), (Point 2 2), (Point 2 3), (Point 3 2), (Point 3 3)]
+
+blinker :: [Point]
+blinker = [(Point 0 0), (Point 0 1), (Point 0 2)]
 
 ----------------------------------- Testing Code ------------------------------------------
 assert_equal :: Eq a => Show a => a -> a -> IO()
