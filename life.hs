@@ -41,6 +41,11 @@ flatten [] = []
 flatten (x:xs) = x ++ (flatten xs) 
 
 ----------------------------------- Game Running and Iterations ------------------------------------------
+main :: IO()
+main = do
+    boardInput <- getContents
+    runGame (parseLines 0 (lines boardInput)) 10
+
 runGame :: [Point] -> Integer -> IO()
 runGame pts numIterations = runGameStep (maxCoords pts) pts numIterations
 
@@ -48,7 +53,7 @@ runGameStep :: Boundary -> [Point] -> Integer -> IO()
 runGameStep _ _ 0 = putStrLn "THE END"
 runGameStep currBoundary pts remaining =
     do
-          printBoard (min_x,min_y,max_x,max_y) pts
+          putStrLn (unlines (board (min_x,min_y,max_x,max_y) pts))
           runGameStep (min_x,min_y,max_x,max_y) (tick pts) (remaining-1)
 
     where (new_min_x,new_min_y,new_max_x,new_max_y) = maxCoords pts
@@ -58,10 +63,21 @@ runGameStep currBoundary pts remaining =
           max_y = max new_max_y curr_max_y
           min_y = min new_min_y curr_min_y
 
------------------------------------ Printing Code ------------------------------------------
-printBoard :: Boundary -> [Point] -> IO()
-printBoard a b = putStrLn (unlines (board a b))
+----------------------------------- Input Code ------------------------------------------
 
+parseLines :: Integer -> [String] -> [Point]
+parseLines _ [] = []
+parseLines lineNo (line:lines) = (parseLine (Point lineNo 0) line) ++ (parseLines (lineNo+1) lines)
+
+parseLine :: Point -> String -> [Point]
+parseLine _ [] = []
+parseLine (Point x y) (char:chars)
+    | char == '*'   = (Point x y) : parseLine nextPt chars
+    | otherwise     = parseLine nextPt chars
+    where
+        nextPt = (Point x (y+1))
+
+----------------------------------- Printing Code ------------------------------------------
 board :: Boundary -> [Point] -> [[Char]]
 board boundary pts = map (line pts y_range) x_range
     where (min_x, min_y, max_x, max_y) = boundary
@@ -97,14 +113,17 @@ beacon = [(Point 0 0), (Point 0 1), (Point 1 0), (Point 1 1), (Point 2 2), (Poin
 blinker :: [Point]
 blinker = [(Point 0 0), (Point 0 1), (Point 0 2)]
 
+blinkerText :: [Char]
+blinkerText = "*--\n*--\n*--"
+
 ----------------------------------- Testing Code ------------------------------------------
 assert_equal :: Eq a => Show a => a -> a -> IO()
 assert_equal x y
     | x == y = putStrLn "."
     | otherwise = putStrLn ("Expected " ++ show x ++ ", got " ++ show y)
 
-main :: IO ()
-main = do  
+mainTest :: IO ()
+mainTest = do  
         assert_equal True (is_neighbour (Point 1 1) (Point 1 2))
         assert_equal False (is_neighbour (Point 1 1) (Point 1 1))
         assert_equal False (is_neighbour (Point 321 1) (Point 1 1))
